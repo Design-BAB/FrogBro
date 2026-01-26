@@ -1,7 +1,7 @@
 //Author: Design-BAB
 //Date: 12/12/2025
 //Description: It is my happy garden game project. The goal is to reach 268 lines of code
-//notes: start watching after 19:19
+//notes: start watching after 23:06
 
 package main
 
@@ -33,11 +33,36 @@ type Actor struct {
 	Texture rl.Texture2D
 	//this is the collision box``
 	rl.Rectangle // This gives Actor all the fields of rl.Rectangle (X, Y, Width, Height)
-	Speed        float32
+	Xvel         float32
+	Yvel         float32
+	Direction    string
+	Actor
+	AnimationCount int
 }
 
 func newActor(texture rl.Texture2D, x, y float32) *Actor {
-	return &Actor{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}, Speed: MoveDistance}
+	return &Actor{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}, Direction: "left"}
+}
+
+func move(player *Actor, dx, dy float32) {
+	player.X += dx
+	player.Y += dy
+}
+
+func moveLeft(player *Actor, vel float32) {
+	player.Xvel = -vel
+	if player.direction != "left" {
+		player.direction = "left"
+		player.animationCount = 0
+	}
+}
+
+func moveRight(player *Actor, vel float32) {
+	player.Xvel = vel
+	if player.direction != "right" {
+		player.direction = "right"
+		player.animationCount = 0
+	}
 }
 
 func draw(background rl.Texture2D, tiles []rl.Vector2) {
