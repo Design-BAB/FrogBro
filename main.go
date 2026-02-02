@@ -1,7 +1,7 @@
 //Author: Design-BAB
 //Date: 12/12/2025
 //Description: It is my happy garden game project. The goal is to reach 268 lines of code
-//notes: start watching after 23:06
+//notes: start watching after 27:43
 
 package main
 
@@ -14,6 +14,14 @@ const (
 	Height       = 800
 	MoveDistance = 5
 )
+
+type GameState struct {
+	IsOver bool
+}
+
+func newGameState() *GameState {
+	return &GameState{}
+}
 
 func newVector(x, y int32) rl.Vector2 {
 	return rl.Vector2{X: float32(x), Y: float32(y)}
@@ -32,11 +40,10 @@ func getBackground(background rl.Texture2D) []rl.Vector2 {
 type Actor struct {
 	Texture rl.Texture2D
 	//this is the collision box``
-	rl.Rectangle // This gives Actor all the fields of rl.Rectangle (X, Y, Width, Height)
-	Xvel         float32
-	Yvel         float32
-	Direction    string
-	Actor
+	rl.Rectangle   // This gives Actor all the fields of rl.Rectangle (X, Y, Width, Height)
+	Xvel           float32
+	Yvel           float32
+	Direction      string
 	AnimationCount int
 }
 
@@ -51,17 +58,34 @@ func move(player *Actor, dx, dy float32) {
 
 func moveLeft(player *Actor, vel float32) {
 	player.Xvel = -vel
-	if player.direction != "left" {
-		player.direction = "left"
-		player.animationCount = 0
+	if player.Direction != "left" {
+		player.Direction = "left"
+		player.AnimationCount = 0
 	}
 }
 
 func moveRight(player *Actor, vel float32) {
 	player.Xvel = vel
-	if player.direction != "right" {
-		player.direction = "right"
-		player.animationCount = 0
+	if player.Direction != "right" {
+		player.Direction = "right"
+		player.AnimationCount = 0
+	}
+}
+
+func update(player *Actor) {
+	move(player, player.Xvel, player.Yvel)
+
+}
+
+// this will act simular to getInput
+func handleMove(player *Actor, yourGame *GameState) {
+	if yourGame.IsOver == false {
+		if rl.IsKeyDown(rl.KeyRight) {
+			moveRight(player, MoveDistance)
+		}
+		if rl.IsKeyDown(rl.KeyLeft) {
+			moveLeft(player, MoveDistance)
+		}
 	}
 }
 
