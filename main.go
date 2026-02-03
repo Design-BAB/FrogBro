@@ -1,8 +1,7 @@
-//Author: Design-BAB
-//Date: 12/12/2025
-//Description: It is my happy garden game project. The goal is to reach 268 lines of code
-//notes: start watching after 27:43
-
+// Author: Design-BAB
+// Date: 12/12/2025
+// Description: It is my happy garden game project. The goal is to reach 268 lines of code
+// notes: start watching after 31:20
 package main
 
 import (
@@ -14,14 +13,6 @@ const (
 	Height       = 800
 	MoveDistance = 5
 )
-
-type GameState struct {
-	IsOver bool
-}
-
-func newGameState() *GameState {
-	return &GameState{}
-}
 
 func newVector(x, y int32) rl.Vector2 {
 	return rl.Vector2{X: float32(x), Y: float32(y)}
@@ -38,80 +29,81 @@ func getBackground(background rl.Texture2D) []rl.Vector2 {
 }
 
 type Actor struct {
-	Texture rl.Texture2D
-	//this is the collision box``
-	rl.Rectangle   // This gives Actor all the fields of rl.Rectangle (X, Y, Width, Height)
-	Xvel           float32
-	Yvel           float32
-	Direction      string
-	AnimationCount int
+	rl.Rectangle
+	Texture   rl.Texture2D
+	Xvel      float32
+	Yvel      float32
+	Direction string
 }
 
 func newActor(texture rl.Texture2D, x, y float32) *Actor {
-	return &Actor{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}, Direction: "left"}
-}
-
-func move(player *Actor, dx, dy float32) {
-	player.X += dx
-	player.Y += dy
-}
-
-func moveLeft(player *Actor, vel float32) {
-	player.Xvel = -vel
-	if player.Direction != "left" {
-		player.Direction = "left"
-		player.AnimationCount = 0
+	return &Actor{
+		Rectangle: rl.Rectangle{
+			X:      x,
+			Y:      y,
+			Width:  float32(texture.Width),
+			Height: float32(texture.Height),
+		},
+		Texture:   texture,
+		Direction: "left",
 	}
 }
 
-func moveRight(player *Actor, vel float32) {
-	player.Xvel = vel
-	if player.Direction != "right" {
-		player.Direction = "right"
-		player.AnimationCount = 0
+func (a *Actor) handleMove() {
+	a.Xvel = 0 // Reset horizontal velocity each frame
+
+	if rl.IsKeyDown(rl.KeyRight) {
+		a.Xvel = MoveDistance
+		if a.Direction != "right" {
+			a.Direction = "right"
+		}
+	}
+	if rl.IsKeyDown(rl.KeyLeft) {
+		a.Xvel = -MoveDistance
+		if a.Direction != "left" {
+			a.Direction = "left"
+		}
 	}
 }
 
 func update(player *Actor) {
-	move(player, player.Xvel, player.Yvel)
-
+	player.handleMove()
+	player.X += player.Xvel
+	player.Y += player.Yvel
 }
 
-// this will act simular to getInput
-func handleMove(player *Actor, yourGame *GameState) {
-	if yourGame.IsOver == false {
-		if rl.IsKeyDown(rl.KeyRight) {
-			moveRight(player, MoveDistance)
-		}
-		if rl.IsKeyDown(rl.KeyLeft) {
-			moveLeft(player, MoveDistance)
-		}
-	}
-}
-
-func draw(background rl.Texture2D, tiles []rl.Vector2) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, player *Actor) {
 	rl.BeginDrawing()
-
 	rl.ClearBackground(rl.RayWhite)
+
+	// Draw background tiles
 	for _, tile := range tiles {
 		rl.DrawTextureV(background, tile, rl.White)
 	}
-	rl.DrawText("Congrats! You created your first window!", 190, 200, 20, rl.LightGray)
+
+	// Draw player
+	rl.DrawTexture(player.Texture, int32(player.X), int32(player.Y), rl.White)
 
 	rl.EndDrawing()
 }
 
 func main() {
-	rl.InitWindow(Width, Height, "raylib [core] example - basic window")
+	rl.InitWindow(Width, Height, "Platformer Game")
 	defer rl.CloseWindow()
-
 	rl.SetTargetFPS(60)
 
-	background := rl.LoadTexture("images/Background/Blue.png")
+	background := rl.LoadTexture("images/Background/Yellow.png")
 	defer rl.UnloadTexture(background)
-	var tiles []rl.Vector2
-	tiles = getBackground(background)
+	tiles := getBackground(background)
+
+	gopherTexture := rl.LoadTexture("images/Gopher.png")
+	defer rl.UnloadTexture(gopherTexture)
+
+	player := newActor(gopherTexture, 100, 100)
+
+	// Game loop
 	for !rl.WindowShouldClose() {
-		draw(background, tiles)
+		update(player)
+		draw(background, tiles, player)
 	}
 }
