@@ -72,8 +72,8 @@ func (a *Actor) handleMove() {
 func update(player *Actor) {
 	player.handleMove()
 	//This is for Gravity
-	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
-	player.FallCount += 1
+	//player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
+	//player.FallCount += 1
 	// Apply velocity
 	player.X += player.Xvel
 	player.Y += player.Yvel
@@ -89,9 +89,22 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, player *Actor) {
 	}
 
 	// Draw player
-	rl.DrawTexture(player.Texture, int32(player.X), int32(player.Y), rl.White)
+	drawFrog(player)
 
 	rl.EndDrawing()
+}
+
+func drawFrog(player *Actor) {
+	src := rl.NewRectangle(0, 0, float32(player.Texture.Width), float32(player.Texture.Height))
+	dst := rl.NewRectangle(player.X, player.Y, float32(player.Texture.Width), float32(player.Texture.Height))
+	origin := rl.NewVector2(0, 0)
+	if player.Direction == "left" {
+		// Flip horizontally by making source width negative
+		src.Width = -src.Width
+		// Shift the source rect start so it doesn't disappear
+		src.X = float32(player.Texture.Width)
+	}
+	rl.DrawTexturePro(player.Texture, src, dst, origin, 0, rl.White)
 }
 
 func main() {
