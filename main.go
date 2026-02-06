@@ -1,7 +1,7 @@
 // Author: Design-BAB
 // Date: 12/12/2025
 // Description: It is my happy garden game project. The goal is to reach 268 lines of code
-// notes: start watching after 31:20
+// notes: start watching after 35:08:
 package main
 
 import (
@@ -12,6 +12,8 @@ const (
 	Width        = 1000
 	Height       = 800
 	MoveDistance = 5
+	Gravity      = 1
+	FPS          = 60
 )
 
 func newVector(x, y int32) rl.Vector2 {
@@ -34,6 +36,7 @@ type Actor struct {
 	Xvel      float32
 	Yvel      float32
 	Direction string
+	FallCount int
 }
 
 func newActor(texture rl.Texture2D, x, y float32) *Actor {
@@ -68,6 +71,10 @@ func (a *Actor) handleMove() {
 
 func update(player *Actor) {
 	player.handleMove()
+	//This is for Gravity
+	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
+	player.FallCount += 1
+	// Apply velocity
 	player.X += player.Xvel
 	player.Y += player.Yvel
 }
@@ -90,7 +97,7 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, player *Actor) {
 func main() {
 	rl.InitWindow(Width, Height, "Platformer Game")
 	defer rl.CloseWindow()
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(FPS)
 
 	background := rl.LoadTexture("images/Background/Yellow.png")
 	defer rl.UnloadTexture(background)
