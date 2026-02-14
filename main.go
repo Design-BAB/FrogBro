@@ -1,7 +1,7 @@
 // Author: Design-BAB
 // Date: 12/12/2025
 // Description: It is my happy garden game project. The goal is to reach 268 lines of code
-// Notes: Next thing you should do is make it so that it is idel when standing and running when the vel =! 0
+// Notes: Just finished the run/idle states
 
 package main
 
@@ -98,7 +98,7 @@ func (a *Actor) updateAnimation() {
 	}
 }
 
-func update(player *Actor) {
+func update(player *Actor, frog map[string]rl.Texture2D) {
 	player.handleMove()
 	player.updateAnimation()
 
@@ -107,6 +107,14 @@ func update(player *Actor) {
 	//player.FallCount += 1
 
 	// Apply velocity
+	if player.Xvel != 0 {
+		player.X += player.Xvel
+		if player.Texture != frog["run"] {
+			player.Texture = frog["run"]
+		}
+	} else if player.Xvel == 0 && player.Texture == frog["run"] {
+		player.Texture = frog["normal"]
+	}
 	player.X += player.Xvel
 	player.Y += player.Yvel
 }
@@ -152,16 +160,22 @@ func main() {
 	defer rl.UnloadTexture(background)
 	tiles := getBackground(background)
 
-	gopherTexture := rl.LoadTexture("images/run.png")
-	defer rl.UnloadTexture(gopherTexture)
+	theFrogTextures := map[string]rl.Texture2D{
+		"run":    rl.LoadTexture("images/run.png"),
+		"normal": rl.LoadTexture("images/idle.png"),
+	}
+
+	for _, texture := range theFrogTextures {
+		defer rl.UnloadTexture(texture)
+	}
 
 	// Specify the frame width and height for your sprite sheet
 	// For example, if each frame is 32x32 pixels:
-	player := newActor(gopherTexture, 32, 32, 100, 100)
+	player := newActor(theFrogTextures["run"], 32, 32, 100, 100)
 
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player)
+		update(player, theFrogTextures)
 		draw(background, tiles, player)
 	}
 }
