@@ -1,7 +1,13 @@
 // Author: Design-BAB
 // Date: 12/12/2025
-// Description: It is my happy garden game project. The goal is to reach 268 lines of code
-// Notes: Just finished the run/idle states
+// Description: It is my platform game! The goal is to reach 268 lines of code
+// Notes: My next step should be to create a Block struct with rl.Rectangle and Texture fields. -done
+//Write a getBlock function that loads your terrain sprite sheet and extracts a specific tile (e.g., at position 96, 0).-in progress
+//Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
+//Add a simple draw function for blocks.
+//In main, create a slice of blocks ([]Block) to build your floor and platforms by positioning multiple blocks.
+//Update your draw function to loop through and draw all blocks before the player.
+//Later, add collision detection using rl.CheckCollisionRecs to detect when the player overlaps blocks and adjust their position accordingly
 
 package main
 
@@ -96,6 +102,14 @@ func (a *Actor) updateAnimation() {
 		a.AnimationCount = 0
 		a.CurrentFrame = (a.CurrentFrame + 1) % len(a.Frames) // Loop through frames, once it its the last frame, mod would make it go back to zero
 	}
+}
+
+type Block struct {
+	rl.Rectangle
+	Texture rl.Texture2D
+}
+
+func getBlock(x, y, size int) {
 }
 
 func update(player *Actor, frog map[string]rl.Texture2D) {
