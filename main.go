@@ -106,10 +106,20 @@ func (a *Actor) updateAnimation() {
 
 type Block struct {
 	rl.Rectangle
+	Frame   []rl.Rectangle
 	Texture rl.Texture2D
 }
 
-func getBlock(x, y, size int) {
+// next step... turn this 2nd newActor into newBlock
+func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32) *Actor {
+	frames := splitSpriteSheet(texture, frameWidth, frameHeight)
+
+	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames, Direction: "left"}
+}
+
+func getBlock(x, y, size int) rl.Rectangle {
+	frame := rl.NewRectangle(float32(x), float32(y), float32(size), float32(size))
+	return frame
 }
 
 func update(player *Actor, frog map[string]rl.Texture2D) {
