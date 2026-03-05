@@ -2,8 +2,8 @@
 // Date: 12/12/2025
 // Description: It is my platform game! The goal is to reach 268 lines of code
 // Notes: My next step should be to create a Block struct with rl.Rectangle and Texture fields. -done
-//Write a getBlock function that loads your terrain sprite sheet and extracts a specific tile (e.g., at position 96, 0).-in progress
-//Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
+//Write a getBlock function that loads your terrain sprite sheet and extracts a specific tile (e.g., at position 96, 0).-done
+//Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture. -done
 //Add a simple draw function for blocks.
 //In main, create a slice of blocks ([]Block) to build your floor and platforms by positioning multiple blocks.
 //Update your draw function to loop through and draw all blocks before the player.
@@ -21,6 +21,8 @@ const (
 	MoveDistance   = 5
 	Gravity        = 1
 	FPS            = 60
+	BlockTextureX  = 96
+	BlockTextureY  = 0
 	AnimationDelay = 5 // Frames to wait before changing sprite
 )
 
@@ -106,15 +108,15 @@ func (a *Actor) updateAnimation() {
 
 type Block struct {
 	rl.Rectangle
-	Frame   []rl.Rectangle
+	Frame   rl.Rectangle
 	Texture rl.Texture2D
 }
 
 // next step... turn this 2nd newActor into newBlock
-func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32) *Actor {
-	frames := splitSpriteSheet(texture, frameWidth, frameHeight)
-
-	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames, Direction: "left"}
+// Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
+func newBlock(texture rl.Texture2D, x, y, size int) *Block {
+	frame := getBlock(x, y, size)
+	return &Block{Rectangle: rl.Rectangle{X: 20, Y: 20, Width: float32(size), Height: float32(size)}, Texture: texture, Frame: frame}
 }
 
 func getBlock(x, y, size int) rl.Rectangle {
