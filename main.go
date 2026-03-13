@@ -5,9 +5,6 @@
 //Write a getBlock function that loads your terrain sprite sheet and extracts a specific tile (e.g., at position 96, 0).-done
 //Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture. -done
 //Add a simple draw function for blocks.
-//In main, create a slice of blocks ([]Block) to build your floor and platforms by positioning multiple blocks.
-//Update your draw function to loop through and draw all blocks before the player.
-//Later, add collision detection using rl.CheckCollisionRecs to detect when the player overlaps blocks and adjust their position accordingly
 
 package main
 
@@ -115,13 +112,19 @@ type Block struct {
 // next step... turn this 2nd newActor into newBlock
 // Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
 func newBlock(texture rl.Texture2D, x, y, size int) *Block {
-	frame := getBlock(x, y, size)
-	return &Block{Rectangle: rl.Rectangle{X: 20, Y: 20, Width: float32(size), Height: float32(size)}, Texture: texture, Frame: frame}
+	frame := getBlock(BlockTextureX, BlockTextureY, size)
+	whereItGoes := rl.Rectangle{X: 20, Y: 20, Width: float32(size), Height: float32(size)}
+	return &Block{Rectangle: whereItGoes, Texture: texture, Frame: frame}
 }
 
 func getBlock(x, y, size int) rl.Rectangle {
-	frame := rl.NewRectangle(float32(x), float32(y), float32(size), float32(size))
-	return frame
+	theBlockLocation := rl.NewRectangle(float32(x), float32(y), float32(size), float32(size))
+	return theBlockLocation
+}
+
+func drawBlock(blockToDraw *Block) {
+	pos := rl.NewVector2(blockToDraw.X, blockToDraw.Y)
+	rl.DrawTextureRec(blockToDraw.Texture, blockToDraw.Frame, pos, rl.White)
 }
 
 func update(player *Actor, frog map[string]rl.Texture2D) {
