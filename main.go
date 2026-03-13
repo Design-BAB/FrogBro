@@ -1,10 +1,7 @@
 // Author: Design-BAB
 // Date: 12/12/2025
 // Description: It is my platform game! The goal is to reach 268 lines of code
-// Notes: My next step should be to create a Block struct with rl.Rectangle and Texture fields. -done
-//Write a getBlock function that loads your terrain sprite sheet and extracts a specific tile (e.g., at position 96, 0).-done
-//Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture. -done
-//Add a simple draw function for blocks.
+// Notes: My next step should be to create a drawBlock func
 
 package main
 
