@@ -1,7 +1,7 @@
 // Author: Design-BAB
 // Date: 12/12/2025
 // Description: It is my platform game! The goal is to reach 268 lines of code
-// Notes: My next step should be to create a drawBlock func
+// Notes: My next step should be to create a Block struct with rl.Rectangle and Texture fields. -done
 
 package main
 
@@ -110,7 +110,7 @@ type Block struct {
 // Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
 func newBlock(texture rl.Texture2D, x, y, size int) *Block {
 	frame := getBlock(BlockTextureX, BlockTextureY, size)
-	whereItGoes := rl.Rectangle{X: 20, Y: 20, Width: float32(size), Height: float32(size)}
+	whereItGoes := rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(size), Height: float32(size)}
 	return &Block{Rectangle: whereItGoes, Texture: texture, Frame: frame}
 }
 
@@ -145,13 +145,18 @@ func update(player *Actor, frog map[string]rl.Texture2D) {
 	player.Y += player.Yvel
 }
 
-func draw(background rl.Texture2D, tiles []rl.Vector2, player *Actor) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 
 	// Draw background tiles
 	for _, tile := range tiles {
 		rl.DrawTextureV(background, tile, rl.White)
+	}
+
+	//draw blocks
+	for _, block := range blocks {
+		drawBlock(block)
 	}
 
 	// Draw player
@@ -182,19 +187,28 @@ func main() {
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(FPS)
 
+	//this deals with the background
 	background := rl.LoadTexture("images/Background/Yellow.png")
 	defer rl.UnloadTexture(background)
+	//this creates an array of tiles, with their location set
 	tiles := getBackground(background)
 
 	theFrogTextures := map[string]rl.Texture2D{
 		"run":    rl.LoadTexture("images/run.png"),
 		"normal": rl.LoadTexture("images/idle.png"),
 	}
-
 	for _, texture := range theFrogTextures {
 		defer rl.UnloadTexture(texture)
 	}
 
+	blockTexture := rl.LoadTexture("images/Terrain.png")
+	defer rl.UnloadTexture(blockTexture)
+	blocks := []*Block{
+		newBlock(blockTexture, 0, 700, 32),
+		newBlock(blockTexture, 32, 700, 32),
+		newBlock(blockTexture, 64, 700, 32),
+		newBlock(blockTexture, 96, 700, 32),
+	}
 	// Specify the frame width and height for your sprite sheet
 	// For example, if each frame is 32x32 pixels:
 	player := newActor(theFrogTextures["run"], 32, 32, 100, 100)
@@ -202,6 +216,6 @@ func main() {
 	// Game loop
 	for !rl.WindowShouldClose() {
 		update(player, theFrogTextures)
-		draw(background, tiles, player)
+		draw(background, tiles, blocks, player)
 	}
 }
