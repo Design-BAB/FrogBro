@@ -1,7 +1,7 @@
 // Author: Design-BAB
-// Date: 12/12/2025
+// Date: 3/21/2026
 // Description: It is my platform game! The goal is to reach 268 lines of code
-// Notes: My next step should be to create a Block struct with rl.Rectangle and Texture fields. -done
+// Notes: My next step should be to continue working on collisions
 
 package main
 
@@ -25,6 +25,7 @@ func newVector(x, y int32) rl.Vector2 {
 }
 
 func getBackground(background rl.Texture2D) []rl.Vector2 {
+	//this creates an array of positions for the background tile
 	var tiles []rl.Vector2
 	for i := range Width/background.Width + 1 {
 		for j := range Height/background.Height + 1 {
@@ -106,10 +107,11 @@ type Block struct {
 	Texture rl.Texture2D
 }
 
-// next step... turn this 2nd newActor into newBlock
-// Create a newBlock constructor that takes x, y, and size, then calls getBlock to set the texture.
+// This newBlock constructor takes x, y, and size, then calls getBlock to set the texture.
 func newBlock(texture rl.Texture2D, x, y, size int) *Block {
+	//this x and y is the location on the .png of where the block design is
 	frame := getBlock(BlockTextureX, BlockTextureY, size)
+	//this x and y is where it goes in the actual game
 	whereItGoes := rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(size), Height: float32(size)}
 	return &Block{Rectangle: whereItGoes, Texture: texture, Frame: frame}
 }
@@ -141,8 +143,19 @@ func update(player *Actor, frog map[string]rl.Texture2D) {
 	} else if player.Xvel == 0 && player.Texture == frog["run"] {
 		player.Texture = frog["normal"]
 	}
+
 	player.X += player.Xvel
 	player.Y += player.Yvel
+
+	//collision with the window
+	player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
+	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
+}
+
+func handleVerticalCollision(player *Actor, blocks []*Blocks) {
+	for _, block := range blocks {
+		//if collide and if Yvel > 0...then set to zero
+	}
 }
 
 func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor) {
