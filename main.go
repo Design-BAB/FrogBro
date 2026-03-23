@@ -133,7 +133,7 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	//This is for Gravity
 	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
 	player.FallCount += 1
-
+	handleCollision(player, blocks)
 	// Apply velocity
 	if player.Xvel != 0 {
 		player.X += player.Xvel
@@ -144,9 +144,8 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 		player.Texture = frog["normal"]
 	}
 
-	handleVerticalCollision(player, blocks)
+	handleCollision(player, blocks)
 
-	player.X += player.Xvel
 	player.Y += player.Yvel
 
 	//collision with the window
@@ -154,17 +153,22 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
 }
 
-func handleVerticalCollision(player *Actor, blocks []*Block) {
+func handleCollision(player *Actor, blocks []*Block) {
 	for _, block := range blocks {
 		//if collide and if Yvel > 0...then set to zero
 		if rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
 			if player.Yvel > 0 {
+				player.Y = block.Y - player.Height
 				player.Yvel = 0
 				player.FallCount = 0
 			} else if player.Yvel < 0 {
 				player.Yvel = 0
 				//if they hit their head, reverse and make them fall down
 				player.Yvel *= -1
+			}
+			//The X-axis collisions need to be handled seperately
+			if player.Xvel < 0 || player.Xvel > 0 {
+				player.Xvel = 0
 			}
 		}
 	}
