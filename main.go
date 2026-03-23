@@ -126,13 +126,13 @@ func drawBlock(blockToDraw *Block) {
 	rl.DrawTextureRec(blockToDraw.Texture, blockToDraw.Frame, pos, rl.White)
 }
 
-func update(player *Actor, frog map[string]rl.Texture2D) {
+func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	player.handleMove()
 	player.updateAnimation()
 
 	//This is for Gravity
-	//player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
-	//player.FallCount += 1
+	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
+	player.FallCount += 1
 
 	// Apply velocity
 	if player.Xvel != 0 {
@@ -144,6 +144,8 @@ func update(player *Actor, frog map[string]rl.Texture2D) {
 		player.Texture = frog["normal"]
 	}
 
+	handleVerticalCollision(player, blocks)
+
 	player.X += player.Xvel
 	player.Y += player.Yvel
 
@@ -152,9 +154,19 @@ func update(player *Actor, frog map[string]rl.Texture2D) {
 	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
 }
 
-func handleVerticalCollision(player *Actor, blocks []*Blocks) {
+func handleVerticalCollision(player *Actor, blocks []*Block) {
 	for _, block := range blocks {
 		//if collide and if Yvel > 0...then set to zero
+		if rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
+			if player.Yvel > 0 {
+				player.Yvel = 0
+				player.FallCount = 0
+			} else if player.Yvel < 0 {
+				player.Yvel = 0
+				//if they hit their head, reverse and make them fall down
+				player.Yvel *= -1
+			}
+		}
 	}
 }
 
@@ -216,6 +228,7 @@ func main() {
 
 	blockTexture := rl.LoadTexture("images/Terrain.png")
 	defer rl.UnloadTexture(blockTexture)
+	//this is where we set the blocks, in the future this can be recorded in a JSON file
 	blocks := []*Block{
 		newBlock(blockTexture, 0, 700, 32),
 		newBlock(blockTexture, 32, 700, 32),
@@ -228,7 +241,7 @@ func main() {
 
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player, theFrogTextures)
+		update(player, theFrogTextures, blocks)
 		draw(background, tiles, blocks, player)
 	}
 }
