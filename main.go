@@ -1,7 +1,10 @@
 // Author: Design-BAB
-// Date: 3/21/2026
-// Description: It is my platform game! The goal is to reach 268 lines of code
-// Notes: My next step should be to continue working on collisions
+// Date: 3/23/2026
+// Description: It is my platform game! Things to do next:
+// - Implement a tile map system (JSON file) for easier level creation
+// - Add more block/terrain types using different sprite sheet positions
+// - Add jumping and falling animations for the player
+// - Build out full levels with platforms, gaps, and obstacles
 
 package main
 
@@ -17,6 +20,7 @@ const (
 	FPS            = 60
 	BlockTextureX  = 96
 	BlockTextureY  = 0
+	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
 )
 
@@ -67,6 +71,7 @@ type Actor struct {
 	Yvel           float32
 	Direction      string
 	FallCount      int
+	JumpCount      int
 }
 
 func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32) *Actor {
@@ -75,19 +80,25 @@ func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32)
 	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames, Direction: "left"}
 }
 
-func (a *Actor) handleMove() {
-	a.Xvel = 0 // Reset horizontal velocity each frame
-
+func (frog *Actor) handleMove() {
+	frog.Xvel = 0 // Reset horizontal velocity each frame
 	if rl.IsKeyDown(rl.KeyRight) {
-		a.Xvel = MoveDistance
-		if a.Direction != "right" {
-			a.Direction = "right"
+		frog.Xvel = MoveDistance
+		if frog.Direction != "right" {
+			frog.Direction = "right"
 		}
 	}
 	if rl.IsKeyDown(rl.KeyLeft) {
-		a.Xvel = -MoveDistance
-		if a.Direction != "left" {
-			a.Direction = "left"
+		frog.Xvel = -MoveDistance
+		if frog.Direction != "left" {
+			frog.Direction = "left"
+		}
+	}
+	if rl.IsKeyPressed(rl.KeyUp) {
+		if frog.JumpCount < 2 {
+			frog.Yvel = JumpHeight
+			frog.FallCount = 0
+			frog.JumpCount++
 		}
 	}
 }
@@ -151,6 +162,13 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	//collision with the window
 	player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
 	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
+
+	// Reset jump when hitting the bottom edge
+	if player.Y >= Height-player.Height {
+		player.Yvel = 0
+		player.FallCount = 0
+		player.JumpCount = 0
+	}
 }
 
 func handleCollision(player *Actor, blocks []*Block) {
@@ -161,14 +179,17 @@ func handleCollision(player *Actor, blocks []*Block) {
 				player.Y = block.Y - player.Height
 				player.Yvel = 0
 				player.FallCount = 0
+				player.JumpCount = 0
 			} else if player.Yvel < 0 {
 				player.Yvel = 0
-				//if they hit their head, reverse and make them fall down
-				player.Yvel *= -1
 			}
 			//The X-axis collisions need to be handled seperately
-			if player.Xvel < 0 || player.Xvel > 0 {
+			if player.Xvel < 0 && player.Y != block.Y-player.Height {
 				player.Xvel = 0
+				player.X = block.X + block.Width
+			} else if player.Xvel > 0 && player.Y != block.Y-player.Height {
+				player.Xvel = 0
+				player.X = block.X - player.Width
 			}
 		}
 	}
