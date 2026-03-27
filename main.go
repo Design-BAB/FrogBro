@@ -1,14 +1,12 @@
 // Author: Design-BAB
 // Date: 3/23/2026
-// Description: It is my platform game! Things to do next:
-// - Implement a tile map system (JSON file) for easier level creation
-// - Add more block/terrain types using different sprite sheet positions
-// - Add jumping and falling animations for the player
-// - Build out full levels with platforms, gaps, and obstacles
 
 package main
 
 import (
+	"fmt"
+	"strconv"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -23,6 +21,15 @@ const (
 	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
 )
+
+type GameState struct {
+	Points int
+	isOver bool
+}
+
+func newGame() *GameState {
+	return &GameState{}
+}
 
 func newVector(x, y int32) rl.Vector2 {
 	return rl.Vector2{X: float32(x), Y: float32(y)}
@@ -144,20 +151,22 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	//This is for Gravity
 	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
 	player.FallCount += 1
+
+	// Apply both velocities
+	player.X += player.Xvel
+	player.Y += player.Yvel
+
+	// Resolve collisions in a single pass
 	handleCollision(player, blocks)
-	// Apply velocity
+
+	// Update texture based on movement
 	if player.Xvel != 0 {
-		player.X += player.Xvel
 		if player.Texture != frog["run"] {
 			player.Texture = frog["run"]
 		}
-	} else if player.Xvel == 0 && player.Texture == frog["run"] {
+	} else if player.Texture == frog["run"] {
 		player.Texture = frog["normal"]
 	}
-
-	handleCollision(player, blocks)
-
-	player.Y += player.Yvel
 
 	//collision with the window
 	player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
@@ -173,23 +182,37 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 
 func handleCollision(player *Actor, blocks []*Block) {
 	for _, block := range blocks {
-		//if collide and if Yvel > 0...then set to zero
-		if rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
+		if !rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
+			continue
+		}
+
+		// Calculate how far the player overlaps into the block from each side
+		overlapLeft := (player.X + player.Width) - block.X
+		overlapRight := (block.X + block.Width) - player.X
+		overlapTop := (player.Y + player.Height) - block.Y
+		overlapBottom := (block.Y + block.Height) - player.Y
+
+		// Find the smallest overlap per axis
+		overlapX := min(overlapLeft, overlapRight)
+		overlapY := min(overlapTop, overlapBottom)
+
+		// Resolve the axis with the smallest penetration
+		if overlapX < overlapY {
+			if player.Xvel > 0 {
+				player.X = block.X - player.Width
+			} else {
+				player.X = block.X + block.Width
+			}
+			player.Xvel = 0
+		} else {
 			if player.Yvel > 0 {
 				player.Y = block.Y - player.Height
 				player.Yvel = 0
 				player.FallCount = 0
 				player.JumpCount = 0
-			} else if player.Yvel < 0 {
+			} else {
+				player.Y = block.Y + block.Height
 				player.Yvel = 0
-			}
-			//The X-axis collisions need to be handled seperately
-			if player.Xvel < 0 && player.Y != block.Y-player.Height {
-				player.Xvel = 0
-				player.X = block.X + block.Width
-			} else if player.Xvel > 0 && player.Y != block.Y-player.Height {
-				player.Xvel = 0
-				player.X = block.X - player.Width
 			}
 		}
 	}
@@ -233,9 +256,12 @@ func drawFrog(player *Actor) {
 }
 
 func main() {
-	rl.InitWindow(Width, Height, "Platformer Game")
+	rl.InitWindow(Width, Height, "Frog Bros")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(FPS)
+	game := newGame()
+	//test
+	fmt.Println("You got now " + strconv.Itoa(game.Points) + " points!")
 
 	//this deals with the background
 	background := rl.LoadTexture("images/Background/Yellow.png")
