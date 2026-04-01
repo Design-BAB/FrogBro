@@ -11,20 +11,22 @@ import (
 )
 
 const (
-	Width          = 1000
+	Width          = 900
 	Height         = 800
 	MoveDistance   = 5
 	Gravity        = 1
 	FPS            = 60
 	BlockTextureX  = 96
 	BlockTextureY  = 0
+	BlockSize      = 32
 	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
 )
 
 type GameState struct {
-	Points int
-	isOver bool
+	Points          int
+	isOver          bool
+	numberOfUpdates int
 }
 
 func newGame() *GameState {
@@ -66,6 +68,15 @@ func splitSpriteSheet(spriteSheet rl.Texture2D, frameWidth, frameHeight int32) [
 	}
 	//this returns a slice of rectangles
 	return frames
+}
+
+type Fly struct {
+	Texture rl.Texture2D
+	rl.Rectangle
+}
+
+func newFly(texture rl.Texture2D, x, y float32) *Fly {
+	return &Fly{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}}
 }
 
 type Actor struct {
@@ -144,7 +155,15 @@ func drawBlock(blockToDraw *Block) {
 	rl.DrawTextureRec(blockToDraw.Texture, blockToDraw.Frame, pos, rl.White)
 }
 
-func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
+func makeBlockRow(texture rl.Texture2D, startX, y, count int) []*Block {
+	var blocks []*Block
+	for i := 0; i < count; i++ {
+		blocks = append(blocks, newBlock(texture, startX+i*BlockSize, y, BlockSize))
+	}
+	return blocks
+}
+
+func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *Fly, flyTextures *[2]rl.Texture2D, yourGame *GameState) {
 	player.handleMove()
 	player.updateAnimation()
 
@@ -167,17 +186,30 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block) {
 	} else if player.Texture == frog["run"] {
 		player.Texture = frog["normal"]
 	}
-
+	if yourGame.numberOfUpdates == 9 {
+		fly = flap(fly, flyTextures)
+		yourGame.numberOfUpdates = 0
+	} else {
+		yourGame.numberOfUpdates += 1
+	}
 	//collision with the window
 	player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
 	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
-
 	// Reset jump when hitting the bottom edge
 	if player.Y >= Height-player.Height {
 		player.Yvel = 0
 		player.FallCount = 0
 		player.JumpCount = 0
 	}
+}
+
+func flap(fly *Fly, textures *[2]rl.Texture2D) *Fly {
+	if fly.Texture == textures[0] {
+		fly.Texture = textures[1]
+	} else {
+		fly.Texture = textures[0]
+	}
+	return fly
 }
 
 func handleCollision(player *Actor, blocks []*Block) {
@@ -218,7 +250,7 @@ func handleCollision(player *Actor, blocks []*Block) {
 	}
 }
 
-func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, fly *Fly) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 
@@ -234,6 +266,8 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 
 	// Draw player
 	drawFrog(player)
+
+	rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
 
 	rl.EndDrawing()
 }
@@ -280,19 +314,51 @@ func main() {
 	blockTexture := rl.LoadTexture("images/Terrain.png")
 	defer rl.UnloadTexture(blockTexture)
 	//this is where we set the blocks, in the future this can be recorded in a JSON file
-	blocks := []*Block{
-		newBlock(blockTexture, 0, 700, 32),
-		newBlock(blockTexture, 32, 700, 32),
-		newBlock(blockTexture, 64, 700, 32),
-		newBlock(blockTexture, 96, 700, 32),
-	}
-	// Specify the frame width and height for your sprite sheet
-	// For example, if each frame is 32x32 pixels:
-	player := newActor(theFrogTextures["run"], 32, 32, 100, 100)
+	blocks := []*Block{}
+
+	// Ground floor (y=736)
+	blocks = append(blocks, makeBlockRow(blockTexture, 0, 736, 7)...)   // x: 0-288
+	blocks = append(blocks, makeBlockRow(blockTexture, 416, 736, 4)...) // x: 416-608
+	blocks = append(blocks, makeBlockRow(blockTexture, 736, 736, 6)...) // x: 736-992
+
+	// Tier 1 (y=640)
+	blocks = append(blocks, makeBlockRow(blockTexture, 192, 640, 3)...) // x: 192-352
+	blocks = append(blocks, makeBlockRow(blockTexture, 608, 640, 3)...) // x: 608-768
+
+	// Tier 2 (y=544)
+	blocks = append(blocks, makeBlockRow(blockTexture, 0, 544, 4)...)   // x: 0-160
+	blocks = append(blocks, makeBlockRow(blockTexture, 416, 544, 5)...) // x: 416-608
+	blocks = append(blocks, makeBlockRow(blockTexture, 832, 544, 4)...) // x: 832-992
+
+	// Tier 3 (y=448)
+	blocks = append(blocks, makeBlockRow(blockTexture, 224, 448, 4)...) // x: 224-416
+	blocks = append(blocks, makeBlockRow(blockTexture, 640, 448, 3)...) // x: 640-800
+
+	// Tier 4 (y=352)
+	blocks = append(blocks, makeBlockRow(blockTexture, 0, 352, 4)...)   // x: 0-160
+	blocks = append(blocks, makeBlockRow(blockTexture, 448, 352, 4)...) // x: 448-608
+	blocks = append(blocks, makeBlockRow(blockTexture, 832, 352, 5)...) // x: 832-992
+
+	// Tier 5 (y=256)
+	blocks = append(blocks, makeBlockRow(blockTexture, 224, 256, 7)...) // x: 224-416
+	blocks = append(blocks, makeBlockRow(blockTexture, 640, 256, 2)...) // x: 640-800
+
+	// Goal platform - top right (y=160) - place door here later
+	blocks = append(blocks, makeBlockRow(blockTexture, 736, 160, 7)...) // x: 736-992
+
+	// Player starts on the left ground floor
+	player := newActor(theFrogTextures["run"], BlockSize, BlockSize, 50, 70)
+
+	var flyTextures [2]rl.Texture2D
+	flyTextures[0] = rl.LoadTexture("images/FlyUp.png")
+	defer rl.UnloadTexture(flyTextures[0])
+	flyTextures[1] = rl.LoadTexture("images/FlyDown.png")
+	defer rl.UnloadTexture(flyTextures[1])
+	fly := newFly(flyTextures[0], 25, 25)
 
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player, theFrogTextures, blocks)
-		draw(background, tiles, blocks, player)
+		update(player, theFrogTextures, blocks, fly, &flyTextures, game)
+		draw(background, tiles, blocks, player, fly)
 	}
 }
