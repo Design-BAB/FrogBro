@@ -5,14 +5,13 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
-	Width          = 900
-	Height         = 800
+	Width          = 800
+	Height         = 672
 	MoveDistance   = 5
 	Gravity        = 1
 	FPS            = 60
@@ -24,7 +23,7 @@ const (
 )
 
 type GameState struct {
-	Points          int
+	Score           int
 	isOver          bool
 	numberOfUpdates int
 }
@@ -87,7 +86,7 @@ type Actor struct {
 	AnimationCount int
 	Xvel           float32
 	Yvel           float32
-	Direction      string
+	FacingRight    bool
 	FallCount      int
 	JumpCount      int
 }
@@ -95,21 +94,21 @@ type Actor struct {
 func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32) *Actor {
 	frames := splitSpriteSheet(texture, frameWidth, frameHeight)
 
-	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames, Direction: "left"}
+	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames}
 }
 
 func (frog *Actor) handleMove() {
 	frog.Xvel = 0 // Reset horizontal velocity each frame
 	if rl.IsKeyDown(rl.KeyRight) {
 		frog.Xvel = MoveDistance
-		if frog.Direction != "right" {
-			frog.Direction = "right"
+		if frog.FacingRight != true {
+			frog.FacingRight = true
 		}
 	}
 	if rl.IsKeyDown(rl.KeyLeft) {
 		frog.Xvel = -MoveDistance
-		if frog.Direction != "left" {
-			frog.Direction = "left"
+		if frog.FacingRight != false {
+			frog.FacingRight = false
 		}
 	}
 	if rl.IsKeyPressed(rl.KeyUp) {
@@ -176,7 +175,7 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *F
 	player.Y += player.Yvel
 
 	// Resolve collisions in a single pass
-	handleCollision(player, blocks)
+	handleCollision(player, blocks, fly, yourGame)
 
 	// Update texture based on movement
 	if player.Xvel != 0 {
@@ -212,7 +211,14 @@ func flap(fly *Fly, textures *[2]rl.Texture2D) *Fly {
 	return fly
 }
 
-func handleCollision(player *Actor, blocks []*Block) {
+func handleCollision(player *Actor, blocks []*Block, fly *Fly, yourGame *GameState) {
+	if rl.CheckCollisionRecs(player.Rectangle, fly.Rectangle) {
+		//just gonna make it "disappear"
+		fly.X = 900
+		fly.Y = 900
+		yourGame.Score++
+		fmt.Println(yourGame.Score)
+	}
 	for _, block := range blocks {
 		if !rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
 			continue
@@ -248,8 +254,8 @@ func handleCollision(player *Actor, blocks []*Block) {
 			}
 		}
 	}
-}
 
+}
 func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, fly *Fly) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
@@ -279,7 +285,7 @@ func drawFrog(player *Actor) {
 	dst := rl.NewRectangle(player.X, player.Y, player.Width, player.Height)
 	origin := rl.NewVector2(0, 0)
 
-	if player.Direction == "left" {
+	if player.FacingRight == false {
 		// Flip horizontally by making source width negative
 		src.Width = -src.Width
 		// Shift the source rect start so it doesn't disappear
@@ -294,9 +300,6 @@ func main() {
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(FPS)
 	game := newGame()
-	//test
-	fmt.Println("You got now " + strconv.Itoa(game.Points) + " points!")
-
 	//this deals with the background
 	background := rl.LoadTexture("images/Background/Yellow.png")
 	defer rl.UnloadTexture(background)
@@ -316,11 +319,6 @@ func main() {
 	//this is where we set the blocks, in the future this can be recorded in a JSON file
 	blocks := []*Block{}
 
-	// Ground floor (y=736)
-	blocks = append(blocks, makeBlockRow(blockTexture, 0, 736, 7)...)   // x: 0-288
-	blocks = append(blocks, makeBlockRow(blockTexture, 416, 736, 4)...) // x: 416-608
-	blocks = append(blocks, makeBlockRow(blockTexture, 736, 736, 6)...) // x: 736-992
-
 	// Tier 1 (y=640)
 	blocks = append(blocks, makeBlockRow(blockTexture, 192, 640, 3)...) // x: 192-352
 	blocks = append(blocks, makeBlockRow(blockTexture, 608, 640, 3)...) // x: 608-768
@@ -328,7 +326,6 @@ func main() {
 	// Tier 2 (y=544)
 	blocks = append(blocks, makeBlockRow(blockTexture, 0, 544, 4)...)   // x: 0-160
 	blocks = append(blocks, makeBlockRow(blockTexture, 416, 544, 5)...) // x: 416-608
-	blocks = append(blocks, makeBlockRow(blockTexture, 832, 544, 4)...) // x: 832-992
 
 	// Tier 3 (y=448)
 	blocks = append(blocks, makeBlockRow(blockTexture, 224, 448, 4)...) // x: 224-416
@@ -337,14 +334,13 @@ func main() {
 	// Tier 4 (y=352)
 	blocks = append(blocks, makeBlockRow(blockTexture, 0, 352, 4)...)   // x: 0-160
 	blocks = append(blocks, makeBlockRow(blockTexture, 448, 352, 4)...) // x: 448-608
-	blocks = append(blocks, makeBlockRow(blockTexture, 832, 352, 5)...) // x: 832-992
 
 	// Tier 5 (y=256)
 	blocks = append(blocks, makeBlockRow(blockTexture, 224, 256, 7)...) // x: 224-416
 	blocks = append(blocks, makeBlockRow(blockTexture, 640, 256, 2)...) // x: 640-800
 
 	// Goal platform - top right (y=160) - place door here later
-	blocks = append(blocks, makeBlockRow(blockTexture, 736, 160, 7)...) // x: 736-992
+	blocks = append(blocks, makeBlockRow(blockTexture, 600, 160, 7)...) // x: 736-992
 
 	// Player starts on the left ground floor
 	player := newActor(theFrogTextures["run"], BlockSize, BlockSize, 50, 70)
@@ -354,7 +350,7 @@ func main() {
 	defer rl.UnloadTexture(flyTextures[0])
 	flyTextures[1] = rl.LoadTexture("images/FlyDown.png")
 	defer rl.UnloadTexture(flyTextures[1])
-	fly := newFly(flyTextures[0], 25, 25)
+	fly := newFly(flyTextures[0], 200, 75)
 
 	// Game loop
 	for !rl.WindowShouldClose() {
