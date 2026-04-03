@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -20,6 +21,7 @@ const (
 	BlockSize      = 32
 	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
+
 )
 
 type GameState struct {
@@ -162,7 +164,7 @@ func makeBlockRow(texture rl.Texture2D, startX, y, count int) []*Block {
 	return blocks
 }
 
-func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *Fly, flyTextures *[2]rl.Texture2D, yourGame *GameState) {
+func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [3]*Fly, flyTextures *[2]rl.Texture2D, yourGame *GameState) {
 	player.handleMove()
 	player.updateAnimation()
 
@@ -175,7 +177,7 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *F
 	player.Y += player.Yvel
 
 	// Resolve collisions in a single pass
-	handleCollision(player, blocks, fly, yourGame)
+	handleCollision(player, blocks, flys, yourGame)
 
 	// Update texture based on movement
 	if player.Xvel != 0 {
@@ -186,7 +188,7 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *F
 		player.Texture = frog["normal"]
 	}
 	if yourGame.numberOfUpdates == 9 {
-		fly = flap(fly, flyTextures)
+		flys = flap(flys, flyTextures)
 		yourGame.numberOfUpdates = 0
 	} else {
 		yourGame.numberOfUpdates += 1
@@ -202,22 +204,26 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, fly *F
 	}
 }
 
-func flap(fly *Fly, textures *[2]rl.Texture2D) *Fly {
-	if fly.Texture == textures[0] {
-		fly.Texture = textures[1]
-	} else {
-		fly.Texture = textures[0]
+func flap(flys [3]*Fly, textures *[2]rl.Texture2D) [3]*Fly {
+	for _, fly := range flys {
+		if fly.Texture == textures[0] {
+			fly.Texture = textures[1]
+		} else {
+			fly.Texture = textures[0]
+		}
 	}
-	return fly
+	return flys
 }
 
-func handleCollision(player *Actor, blocks []*Block, fly *Fly, yourGame *GameState) {
-	if rl.CheckCollisionRecs(player.Rectangle, fly.Rectangle) {
-		//just gonna make it "disappear"
-		fly.X = 900
-		fly.Y = 900
-		yourGame.Score++
-		fmt.Println(yourGame.Score)
+func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, yourGame *GameState) {
+	for _, fly := range flys {
+		if rl.CheckCollisionRecs(player.Rectangle, fly.Rectangle) {
+			//just gonna make it "disappear"
+			fly.X = 900
+			fly.Y = 900
+			yourGame.Score++
+			fmt.Println(yourGame.Score)
+		}
 	}
 	for _, block := range blocks {
 		if !rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
@@ -254,9 +260,8 @@ func handleCollision(player *Actor, blocks []*Block, fly *Fly, yourGame *GameSta
 			}
 		}
 	}
-
 }
-func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, fly *Fly) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 
@@ -273,8 +278,12 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 	// Draw player
 	drawFrog(player)
 
-	rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
-
+	for _, fly := range flys {
+		if fly.X < Width {
+			rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
+		}
+	}
+	rl.DrawText("Your score is "+strconv.Itoa(score), 20, 20, 18, rl.DarkGray)
 	rl.EndDrawing()
 }
 
@@ -350,11 +359,13 @@ func main() {
 	defer rl.UnloadTexture(flyTextures[0])
 	flyTextures[1] = rl.LoadTexture("images/FlyDown.png")
 	defer rl.UnloadTexture(flyTextures[1])
-	fly := newFly(flyTextures[0], 200, 75)
-
+	var flys [3]*Fly
+	flys[0] = newFly(flyTextures[0], 200, 580)
+	flys[1] = newFly(flyTextures[1], 300, 400)
+	flys[2] = newFly(flyTextures[0], 100, 250)
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player, theFrogTextures, blocks, fly, &flyTextures, game)
-		draw(background, tiles, blocks, player, fly)
+		update(player, theFrogTextures, blocks, flys, &flyTextures, game)
+		draw(background, tiles, blocks, player, flys, game.Score)
 	}
 }
