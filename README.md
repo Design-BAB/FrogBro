@@ -1,4 +1,4 @@
-# Frog Bros
+# Frog Bro
 
 A 2D platformer game built with Go and Raylib where players control a frog collecting flies across challenging vertical platforms.
 
