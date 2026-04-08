@@ -80,6 +80,15 @@ func newFly(texture rl.Texture2D, x, y float32) *Fly {
 	return &Fly{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}}
 }
 
+type Door struct {
+	Texture rl.Texture2D
+	rl.Rectangle
+}
+
+func newDoor(texture rl.Texture2D, x, y float32) *Door {
+	return &Door{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}}
+}
+
 type Actor struct {
 	rl.Rectangle
 	Texture        rl.Texture2D
@@ -261,7 +270,7 @@ func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, yourGame *Gam
 		}
 	}
 }
-func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int, door *Door) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 
@@ -283,6 +292,7 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 			rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
 		}
 	}
+	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
 	rl.DrawText("Your score is "+strconv.Itoa(score), 20, 20, 18, rl.DarkGray)
 	rl.EndDrawing()
 }
@@ -331,23 +341,18 @@ func main() {
 	// Tier 1 (y=640)
 	blocks = append(blocks, makeBlockRow(blockTexture, 192, 640, 3)...) // x: 192-352
 	blocks = append(blocks, makeBlockRow(blockTexture, 608, 640, 3)...) // x: 608-768
-
 	// Tier 2 (y=544)
 	blocks = append(blocks, makeBlockRow(blockTexture, 0, 544, 4)...)   // x: 0-160
 	blocks = append(blocks, makeBlockRow(blockTexture, 416, 544, 5)...) // x: 416-608
-
 	// Tier 3 (y=448)
 	blocks = append(blocks, makeBlockRow(blockTexture, 224, 448, 4)...) // x: 224-416
 	blocks = append(blocks, makeBlockRow(blockTexture, 640, 448, 3)...) // x: 640-800
-
 	// Tier 4 (y=352)
 	blocks = append(blocks, makeBlockRow(blockTexture, 0, 352, 4)...)   // x: 0-160
 	blocks = append(blocks, makeBlockRow(blockTexture, 448, 352, 4)...) // x: 448-608
-
 	// Tier 5 (y=256)
 	blocks = append(blocks, makeBlockRow(blockTexture, 224, 256, 7)...) // x: 224-416
 	blocks = append(blocks, makeBlockRow(blockTexture, 640, 256, 2)...) // x: 640-800
-
 	// Goal platform - top right (y=160) - place door here later
 	blocks = append(blocks, makeBlockRow(blockTexture, 600, 160, 7)...) // x: 736-992
 
@@ -363,9 +368,12 @@ func main() {
 	flys[0] = newFly(flyTextures[0], 200, 580)
 	flys[1] = newFly(flyTextures[1], 300, 400)
 	flys[2] = newFly(flyTextures[0], 100, 250)
+	doorTexture := rl.LoadTexture("images/Joker_Red.png")
+	defer rl.UnloadTexture(doorTexture)
+	door := newDoor(doorTexture, 7, 160)
 	// Game loop
 	for !rl.WindowShouldClose() {
 		update(player, theFrogTextures, blocks, flys, &flyTextures, game)
-		draw(background, tiles, blocks, player, flys, game.Score)
+		draw(background, tiles, blocks, player, flys, game.Score, door)
 	}
 }
