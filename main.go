@@ -85,8 +85,9 @@ type Door struct {
 	rl.Rectangle
 }
 
-func newDoor(texture rl.Texture2D, x, y float32) *Door {
-	return &Door{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}}
+// I noticed that this particular object deals pratically with int32 so, the axis is going to stay as int32 instead of float32
+func newDoor(texture rl.Texture2D, x, y int32) *Door {
+	return &Door{Texture: texture, Rectangle: rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(texture.Width), Height: float32(texture.Height)}}
 }
 
 type Actor struct {
@@ -292,7 +293,9 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 			rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
 		}
 	}
+	//draw the door
 	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
+	//GUI
 	rl.DrawText("Your score is "+strconv.Itoa(score), 20, 20, 18, rl.DarkGray)
 	rl.EndDrawing()
 }
@@ -370,7 +373,7 @@ func main() {
 	flys[2] = newFly(flyTextures[0], 100, 250)
 	doorTexture := rl.LoadTexture("images/Joker_Red.png")
 	defer rl.UnloadTexture(doorTexture)
-	door := newDoor(doorTexture, 7, 160)
+	door := newDoor(doorTexture, Width-5-doorTexture.Width, 0-5-doorTexture.Height)
 	// Game loop
 	for !rl.WindowShouldClose() {
 		update(player, theFrogTextures, blocks, flys, &flyTextures, game)
