@@ -279,6 +279,8 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 	for _, tile := range tiles {
 		rl.DrawTextureV(background, tile, rl.White)
 	}
+	//draw the door
+	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
 
 	//draw blocks
 	for _, block := range blocks {
@@ -293,8 +295,6 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 			rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
 		}
 	}
-	//draw the door
-	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
 	//GUI
 	rl.DrawText("Your score is "+strconv.Itoa(score), 20, 20, 18, rl.DarkGray)
 	rl.EndDrawing()
@@ -361,7 +361,7 @@ func main() {
 
 	// Player starts on the left ground floor
 	player := newActor(theFrogTextures["run"], BlockSize, BlockSize, 50, 70)
-
+	//fly codw
 	var flyTextures [2]rl.Texture2D
 	flyTextures[0] = rl.LoadTexture("images/FlyUp.png")
 	defer rl.UnloadTexture(flyTextures[0])
@@ -371,9 +371,10 @@ func main() {
 	flys[0] = newFly(flyTextures[0], 200, 580)
 	flys[1] = newFly(flyTextures[1], 300, 400)
 	flys[2] = newFly(flyTextures[0], 100, 250)
-	doorTexture := rl.LoadTexture("images/Joker_Red.png")
+	//door code
+	doorTexture := rl.LoadTexture("images/door.png")
 	defer rl.UnloadTexture(doorTexture)
-	door := newDoor(doorTexture, Width-5-doorTexture.Width, 0-5-doorTexture.Height)
+	door := newDoor(doorTexture, Width-5-doorTexture.Width, 20)
 	// Game loop
 	for !rl.WindowShouldClose() {
 		update(player, theFrogTextures, blocks, flys, &flyTextures, game)
