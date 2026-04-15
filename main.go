@@ -80,14 +80,14 @@ func newFly(texture rl.Texture2D, x, y float32) *Fly {
 	return &Fly{Texture: texture, Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(texture.Width), Height: float32(texture.Height)}}
 }
 
-type Door struct {
+type Object struct {
 	Texture rl.Texture2D
 	rl.Rectangle
 }
 
 // I noticed that this particular object deals pratically with int32 so, the axis is going to stay as int32 instead of float32
-func newDoor(texture rl.Texture2D, x, y int32) *Door {
-	return &Door{Texture: texture, Rectangle: rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(texture.Width), Height: float32(texture.Height)}}
+func newObject(texture rl.Texture2D, x, y int32) *Object {
+	return &Object{Texture: texture, Rectangle: rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(texture.Width), Height: float32(texture.Height)}}
 }
 
 type Actor struct {
@@ -174,43 +174,45 @@ func makeBlockRow(texture rl.Texture2D, startX, y, count int) []*Block {
 	return blocks
 }
 
-func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [3]*Fly, flyTextures *[2]rl.Texture2D, yourGame *GameState) {
-	player.handleMove()
-	player.updateAnimation()
+func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [3]*Fly, flyTextures *[2]rl.Texture2D, salt *Object, yourGame *GameState) {
+	if yourGame.isOver == false {
+		player.handleMove()
+		player.updateAnimation()
 
-	//This is for Gravity
-	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
-	player.FallCount += 1
+		//This is for Gravity
+		player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
+		player.FallCount += 1
 
-	// Apply both velocities
-	player.X += player.Xvel
-	player.Y += player.Yvel
+		// Apply both velocities
+		player.X += player.Xvel
+		player.Y += player.Yvel
 
-	// Resolve collisions in a single pass
-	handleCollision(player, blocks, flys, yourGame)
+		// Resolve collisions in a single pass
+		handleCollision(player, blocks, flys, salt, yourGame)
 
-	// Update texture based on movement
-	if player.Xvel != 0 {
-		if player.Texture != frog["run"] {
-			player.Texture = frog["run"]
+		// Update texture based on movement
+		if player.Xvel != 0 {
+			if player.Texture != frog["run"] {
+				player.Texture = frog["run"]
+			}
+		} else if player.Texture == frog["run"] {
+			player.Texture = frog["normal"]
 		}
-	} else if player.Texture == frog["run"] {
-		player.Texture = frog["normal"]
-	}
-	if yourGame.numberOfUpdates == 9 {
-		flys = flap(flys, flyTextures)
-		yourGame.numberOfUpdates = 0
-	} else {
-		yourGame.numberOfUpdates += 1
-	}
-	//collision with the window
-	player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
-	player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
-	// Reset jump when hitting the bottom edge
-	if player.Y >= Height-player.Height {
-		player.Yvel = 0
-		player.FallCount = 0
-		player.JumpCount = 0
+		if yourGame.numberOfUpdates == 9 {
+			flys = flap(flys, flyTextures)
+			yourGame.numberOfUpdates = 0
+		} else {
+			yourGame.numberOfUpdates += 1
+		}
+		//collision with the window
+		player.X = rl.Clamp(player.X, 0.0, Width-player.Width)
+		player.Y = rl.Clamp(player.Y, 0.0, Height-player.Height)
+		// Reset jump when hitting the bottom edge
+		if player.Y >= Height-player.Height {
+			player.Yvel = 0
+			player.FallCount = 0
+			player.JumpCount = 0
+		}
 	}
 }
 
@@ -225,7 +227,7 @@ func flap(flys [3]*Fly, textures *[2]rl.Texture2D) [3]*Fly {
 	return flys
 }
 
-func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, yourGame *GameState) {
+func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, salt *Object, yourGame *GameState) {
 	for _, fly := range flys {
 		if rl.CheckCollisionRecs(player.Rectangle, fly.Rectangle) {
 			//just gonna make it "disappear"
@@ -271,7 +273,8 @@ func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, yourGame *Gam
 		}
 	}
 }
-func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int, door *Door) {
+
+func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int, door, salt *Object) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 
@@ -281,6 +284,7 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *
 	}
 	//draw the door
 	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
+	rl.DrawTexture(salt.Texture, int32(salt.X), int32(salt.Y), rl.White)
 
 	//draw blocks
 	for _, block := range blocks {
@@ -374,10 +378,14 @@ func main() {
 	//door code
 	doorTexture := rl.LoadTexture("images/door.png")
 	defer rl.UnloadTexture(doorTexture)
-	door := newDoor(doorTexture, Width-5-doorTexture.Width, 20)
+	door := newObject(doorTexture, Width-5-doorTexture.Width, 20)
+	//salt
+	saltTexture := rl.LoadTexture("images/salt.png")
+	defer rl.UnloadTexture(saltTexture)
+	salt := newObject(saltTexture, 125, 125)
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player, theFrogTextures, blocks, flys, &flyTextures, game)
-		draw(background, tiles, blocks, player, flys, game.Score, door)
+		update(player, theFrogTextures, blocks, flys, &flyTextures, salt, game)
+		draw(background, tiles, blocks, player, flys, game.Score, door, salt)
 	}
 }
