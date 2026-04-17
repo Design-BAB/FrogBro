@@ -21,7 +21,7 @@ const (
 	BlockSize      = 32
 	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
-
+	FlapDelay      = 9
 )
 
 type GameState struct {
@@ -85,6 +85,16 @@ type Object struct {
 	rl.Rectangle
 }
 
+type Level struct {
+	Flies  [3]*Fly
+	Salt   *Object
+	Blocks []*Block
+}
+
+func newLevel(blocks []*Block, flies [3]*Fly, salt *Object) *Level {
+	return &Level{Blocks: blocks, Flies: flies, Salt: salt}
+}
+
 // I noticed that this particular object deals pratically with int32 so, the axis is going to stay as int32 instead of float32
 func newObject(texture rl.Texture2D, x, y int32) *Object {
 	return &Object{Texture: texture, Rectangle: rl.Rectangle{X: float32(x), Y: float32(y), Width: float32(texture.Width), Height: float32(texture.Height)}}
@@ -107,29 +117,6 @@ func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32)
 	frames := splitSpriteSheet(texture, frameWidth, frameHeight)
 
 	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames}
-}
-
-func (frog *Actor) handleMove() {
-	frog.Xvel = 0 // Reset horizontal velocity each frame
-	if rl.IsKeyDown(rl.KeyRight) {
-		frog.Xvel = MoveDistance
-		if frog.FacingRight != true {
-			frog.FacingRight = true
-		}
-	}
-	if rl.IsKeyDown(rl.KeyLeft) {
-		frog.Xvel = -MoveDistance
-		if frog.FacingRight != false {
-			frog.FacingRight = false
-		}
-	}
-	if rl.IsKeyPressed(rl.KeyUp) {
-		if frog.JumpCount < 2 {
-			frog.Yvel = JumpHeight
-			frog.FallCount = 0
-			frog.JumpCount++
-		}
-	}
 }
 
 func (a *Actor) updateAnimation() {
@@ -174,7 +161,38 @@ func makeBlockRow(texture rl.Texture2D, startX, y, count int) []*Block {
 	return blocks
 }
 
-func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [3]*Fly, flyTextures *[2]rl.Texture2D, salt *Object, yourGame *GameState) {
+func createLevel(blockTexture rl.Texture2D, flyTextures *[2]rl.Texture2D, saltTexture rl.Texture2D) *Level {
+	blocks := []*Block{}
+
+	// Tier 1 (y=640)
+	blocks = append(blocks, makeBlockRow(blockTexture, 192, 640, 3)...)
+	blocks = append(blocks, makeBlockRow(blockTexture, 608, 640, 3)...)
+	// Tier 2 (y=544)
+	blocks = append(blocks, makeBlockRow(blockTexture, 0, 544, 4)...)
+	blocks = append(blocks, makeBlockRow(blockTexture, 416, 544, 5)...)
+	// Tier 3 (y=448)
+	blocks = append(blocks, makeBlockRow(blockTexture, 224, 448, 4)...)
+	blocks = append(blocks, makeBlockRow(blockTexture, 640, 448, 3)...)
+	// Tier 4 (y=352)
+	blocks = append(blocks, makeBlockRow(blockTexture, 0, 352, 4)...)
+	blocks = append(blocks, makeBlockRow(blockTexture, 448, 352, 4)...)
+	// Tier 5 (y=256)
+	blocks = append(blocks, makeBlockRow(blockTexture, 224, 256, 7)...)
+	blocks = append(blocks, makeBlockRow(blockTexture, 640, 256, 2)...)
+	// Goal platform
+	blocks = append(blocks, makeBlockRow(blockTexture, 600, 160, 7)...)
+
+	var flys [3]*Fly
+	flys[0] = newFly(flyTextures[0], 200, 580)
+	flys[1] = newFly(flyTextures[1], 300, 400)
+	flys[2] = newFly(flyTextures[0], 100, 250)
+
+	salt := newObject(saltTexture, 125, 125)
+
+	return newLevel(blocks, flys, salt)
+}
+
+func update(player *Actor, frog map[string]rl.Texture2D, level *Level, flyTextures *[2]rl.Texture2D, blockTexture, saltTexture rl.Texture2D, yourGame *GameState) {
 	if yourGame.isOver == false {
 		player.handleMove()
 		player.updateAnimation()
@@ -188,7 +206,7 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [
 		player.Y += player.Yvel
 
 		// Resolve collisions in a single pass
-		handleCollision(player, blocks, flys, salt, yourGame)
+		handleCollision(player, level, yourGame)
 
 		// Update texture based on movement
 		if player.Xvel != 0 {
@@ -198,8 +216,8 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [
 		} else if player.Texture == frog["run"] {
 			player.Texture = frog["normal"]
 		}
-		if yourGame.numberOfUpdates == 9 {
-			flys = flap(flys, flyTextures)
+		if yourGame.numberOfUpdates == FlapDelay {
+			level.Flies = flap(level.Flies, flyTextures)
 			yourGame.numberOfUpdates = 0
 		} else {
 			yourGame.numberOfUpdates += 1
@@ -212,6 +230,43 @@ func update(player *Actor, frog map[string]rl.Texture2D, blocks []*Block, flys [
 			player.Yvel = 0
 			player.FallCount = 0
 			player.JumpCount = 0
+		}
+	} else {
+		if rl.IsKeyPressed(rl.KeyX) {
+			yourGame.isOver = false
+			yourGame.Score = 0
+
+			*level = *createLevel(blockTexture, flyTextures, saltTexture)
+
+			player.X = 50
+			player.Y = 70
+			player.Xvel = 0
+			player.Yvel = 0
+			player.JumpCount = 0
+			player.FallCount = 0
+		}
+	}
+}
+
+func (frog *Actor) handleMove() {
+	frog.Xvel = 0 // Reset horizontal velocity each frame
+	if rl.IsKeyDown(rl.KeyRight) {
+		frog.Xvel = MoveDistance
+		if frog.FacingRight == false {
+			frog.FacingRight = true
+		}
+	}
+	if rl.IsKeyDown(rl.KeyLeft) {
+		frog.Xvel = -MoveDistance
+		if frog.FacingRight {
+			frog.FacingRight = false
+		}
+	}
+	if rl.IsKeyPressed(rl.KeyUp) {
+		if frog.JumpCount < 2 {
+			frog.Yvel = JumpHeight
+			frog.FallCount = 0
+			frog.JumpCount++
 		}
 	}
 }
@@ -227,8 +282,8 @@ func flap(flys [3]*Fly, textures *[2]rl.Texture2D) [3]*Fly {
 	return flys
 }
 
-func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, salt *Object, yourGame *GameState) {
-	for _, fly := range flys {
+func handleCollision(player *Actor, level *Level, yourGame *GameState) {
+	for _, fly := range level.Flies {
 		if rl.CheckCollisionRecs(player.Rectangle, fly.Rectangle) {
 			//just gonna make it "disappear"
 			fly.X = 900
@@ -237,7 +292,10 @@ func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, salt *Object,
 			fmt.Println(yourGame.Score)
 		}
 	}
-	for _, block := range blocks {
+	if rl.CheckCollisionRecs(player.Rectangle, level.Salt.Rectangle) {
+		yourGame.isOver = true
+	}
+	for _, block := range level.Blocks {
 		if !rl.CheckCollisionRecs(player.Rectangle, block.Rectangle) {
 			continue
 		}
@@ -274,33 +332,36 @@ func handleCollision(player *Actor, blocks []*Block, flys [3]*Fly, salt *Object,
 	}
 }
 
-func draw(background rl.Texture2D, tiles []rl.Vector2, blocks []*Block, player *Actor, flys [3]*Fly, score int, door, salt *Object) {
+func draw(background rl.Texture2D, tiles []rl.Vector2, level *Level, player *Actor, door *Object, game *GameState) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
-
 	// Draw background tiles
 	for _, tile := range tiles {
 		rl.DrawTextureV(background, tile, rl.White)
 	}
-	//draw the door
-	rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
-	rl.DrawTexture(salt.Texture, int32(salt.X), int32(salt.Y), rl.White)
+	if game.isOver == false {
+		//draw the door
+		rl.DrawTexture(door.Texture, int32(door.X), int32(door.Y), rl.White)
+		rl.DrawTexture(level.Salt.Texture, int32(level.Salt.X), int32(level.Salt.Y), rl.White)
 
-	//draw blocks
-	for _, block := range blocks {
-		drawBlock(block)
-	}
-
-	// Draw player
-	drawFrog(player)
-
-	for _, fly := range flys {
-		if fly.X < Width {
-			rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
+		//draw blocks
+		for _, block := range level.Blocks {
+			drawBlock(block)
 		}
+
+		// Draw player
+		drawFrog(player)
+
+		for _, fly := range level.Flies {
+			if fly.X < Width {
+				rl.DrawTexture(fly.Texture, int32(fly.X), int32(fly.Y), rl.White)
+			}
+		}
+		//GUI
+		rl.DrawText("Your score is "+strconv.Itoa(game.Score), 20, 20, 18, rl.DarkGray)
+	} else {
+		rl.DrawText("Game over", Width/2, Height/2, 18, rl.DarkGray)
 	}
-	//GUI
-	rl.DrawText("Your score is "+strconv.Itoa(score), 20, 20, 18, rl.DarkGray)
 	rl.EndDrawing()
 }
 
@@ -342,39 +403,14 @@ func main() {
 
 	blockTexture := rl.LoadTexture("images/Terrain.png")
 	defer rl.UnloadTexture(blockTexture)
-	//this is where we set the blocks, in the future this can be recorded in a JSON file
-	blocks := []*Block{}
-
-	// Tier 1 (y=640)
-	blocks = append(blocks, makeBlockRow(blockTexture, 192, 640, 3)...) // x: 192-352
-	blocks = append(blocks, makeBlockRow(blockTexture, 608, 640, 3)...) // x: 608-768
-	// Tier 2 (y=544)
-	blocks = append(blocks, makeBlockRow(blockTexture, 0, 544, 4)...)   // x: 0-160
-	blocks = append(blocks, makeBlockRow(blockTexture, 416, 544, 5)...) // x: 416-608
-	// Tier 3 (y=448)
-	blocks = append(blocks, makeBlockRow(blockTexture, 224, 448, 4)...) // x: 224-416
-	blocks = append(blocks, makeBlockRow(blockTexture, 640, 448, 3)...) // x: 640-800
-	// Tier 4 (y=352)
-	blocks = append(blocks, makeBlockRow(blockTexture, 0, 352, 4)...)   // x: 0-160
-	blocks = append(blocks, makeBlockRow(blockTexture, 448, 352, 4)...) // x: 448-608
-	// Tier 5 (y=256)
-	blocks = append(blocks, makeBlockRow(blockTexture, 224, 256, 7)...) // x: 224-416
-	blocks = append(blocks, makeBlockRow(blockTexture, 640, 256, 2)...) // x: 640-800
-	// Goal platform - top right (y=160) - place door here later
-	blocks = append(blocks, makeBlockRow(blockTexture, 600, 160, 7)...) // x: 736-992
-
 	// Player starts on the left ground floor
 	player := newActor(theFrogTextures["run"], BlockSize, BlockSize, 50, 70)
-	//fly codw
+	//fly code
 	var flyTextures [2]rl.Texture2D
 	flyTextures[0] = rl.LoadTexture("images/FlyUp.png")
 	defer rl.UnloadTexture(flyTextures[0])
 	flyTextures[1] = rl.LoadTexture("images/FlyDown.png")
 	defer rl.UnloadTexture(flyTextures[1])
-	var flys [3]*Fly
-	flys[0] = newFly(flyTextures[0], 200, 580)
-	flys[1] = newFly(flyTextures[1], 300, 400)
-	flys[2] = newFly(flyTextures[0], 100, 250)
 	//door code
 	doorTexture := rl.LoadTexture("images/door.png")
 	defer rl.UnloadTexture(doorTexture)
@@ -382,10 +418,10 @@ func main() {
 	//salt
 	saltTexture := rl.LoadTexture("images/salt.png")
 	defer rl.UnloadTexture(saltTexture)
-	salt := newObject(saltTexture, 125, 125)
+	level := createLevel(blockTexture, &flyTextures, saltTexture)
 	// Game loop
 	for !rl.WindowShouldClose() {
-		update(player, theFrogTextures, blocks, flys, &flyTextures, salt, game)
-		draw(background, tiles, blocks, player, flys, game.Score, door, salt)
+		update(player, theFrogTextures, level, &flyTextures, blockTexture, saltTexture, game)
+		draw(background, tiles, level, player, door, game)
 	}
 }
