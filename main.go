@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -22,6 +21,7 @@ const (
 	JumpHeight     = -5
 	AnimationDelay = 5 // Frames to wait before changing sprite
 	FlapDelay      = 9
+	TextSize       = 20
 )
 
 type GameState struct {
@@ -58,7 +58,7 @@ func splitSpriteSheet(spriteSheet rl.Texture2D, frameWidth, frameHeight int32) [
 	frameCount := spriteSheet.Width / frameWidth
 
 	// Create a rectangle for each frame
-	for i := int32(0); i < frameCount; i++ {
+	for i := range frameCount {
 		frame := rl.NewRectangle(
 			float32(i*frameWidth), // X position in sprite sheet
 			0,                     // Y position (0 if single row)
@@ -119,12 +119,12 @@ func newActor(texture rl.Texture2D, frameWidth, frameHeight int32, x, y float32)
 	return &Actor{Rectangle: rl.Rectangle{X: x, Y: y, Width: float32(frameWidth), Height: float32(frameHeight)}, Texture: texture, Frames: frames}
 }
 
-func (a *Actor) updateAnimation() {
-	a.AnimationCount++
+func (frog *Actor) updateAnimation() {
+	frog.AnimationCount++
 
-	if a.AnimationCount >= AnimationDelay {
-		a.AnimationCount = 0
-		a.CurrentFrame = (a.CurrentFrame + 1) % len(a.Frames) // Loop through frames, once it its the last frame, mod would make it go back to zero
+	if frog.AnimationCount >= AnimationDelay {
+		frog.AnimationCount = 0
+		frog.CurrentFrame = (frog.CurrentFrame + 1) % len(frog.Frames) // Loop through frames, once it its the last frame, mod would make it go back to zero
 	}
 }
 
@@ -155,7 +155,7 @@ func drawBlock(blockToDraw *Block) {
 
 func makeBlockRow(texture rl.Texture2D, startX, y, count int) []*Block {
 	var blocks []*Block
-	for i := 0; i < count; i++ {
+	for i := range count {
 		blocks = append(blocks, newBlock(texture, startX+i*BlockSize, y, BlockSize))
 	}
 	return blocks
@@ -187,7 +187,7 @@ func createLevel(blockTexture rl.Texture2D, flyTextures *[2]rl.Texture2D, saltTe
 	flys[1] = newFly(flyTextures[1], 300, 400)
 	flys[2] = newFly(flyTextures[0], 100, 250)
 
-	salt := newObject(saltTexture, 125, 125)
+	salt := newObject(saltTexture, 230, 256-saltTexture.Height)
 
 	return newLevel(blocks, flys, salt)
 }
@@ -289,7 +289,6 @@ func handleCollision(player *Actor, level *Level, yourGame *GameState) {
 			fly.X = 900
 			fly.Y = 900
 			yourGame.Score++
-			fmt.Println(yourGame.Score)
 		}
 	}
 	if rl.CheckCollisionRecs(player.Rectangle, level.Salt.Rectangle) {
@@ -358,9 +357,11 @@ func draw(background rl.Texture2D, tiles []rl.Vector2, level *Level, player *Act
 			}
 		}
 		//GUI
-		rl.DrawText("Your score is "+strconv.Itoa(game.Score), 20, 20, 18, rl.DarkGray)
+		rl.DrawText("Your score is "+strconv.Itoa(game.Score), 20, 20, TextSize, rl.DarkGray)
 	} else {
-		rl.DrawText("Game over", Width/2, Height/2, 18, rl.DarkGray)
+		rl.DrawText("Game over", Width/3-TextSize, Height/3-TextSize, TextSize, rl.DarkGray)
+		rl.DrawText("Press 'X' to play again.", Width/3-TextSize, Height/2-TextSize, TextSize, rl.DarkGray)
+
 	}
 	rl.EndDrawing()
 }
