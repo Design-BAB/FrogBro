@@ -1,5 +1,5 @@
 // Author: Design-BAB
-// Date: 3/23/2026
+// Date: 6/01/2026
 
 package main
 
@@ -301,14 +301,6 @@ func update(player *Actor, frog map[string]rl.Texture2D, level *Level, flyTextur
 	player.handleMove()
 	player.updateAnimation()
 
-	//This is for Gravity
-	player.Yvel += float32(min(1.0, float64(player.FallCount)/FPS*Gravity))
-	player.FallCount += 1
-
-	// Apply both velocities
-	player.X += player.Xvel
-	player.Y += player.Yvel
-
 	// Resolve collisions in a single pass
 	advanceLevel := handleCollision(player, level, yourGame)
 
@@ -388,6 +380,14 @@ func (frog *Actor) handleMove() {
 			frog.JumpCount++
 		}
 	}
+
+	//This is for Gravity
+	frog.Yvel += float32(min(1.0, float64(frog.FallCount)/FPS*Gravity))
+	frog.FallCount += 1
+
+	// Apply both velocities
+	frog.X += frog.Xvel
+	frog.Y += frog.Yvel
 }
 
 func flap(flys [3]*Fly, textures *[2]rl.Texture2D) [3]*Fly {
